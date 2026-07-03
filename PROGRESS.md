@@ -54,11 +54,20 @@ tracks status so a new chat can resume cleanly.
 - `src/App.jsx`, `src/components/GameCard.jsx`, `src/styles/global.css`.
 
 ## Design decisions worth remembering
-- Rule representation: window of per-position color bitmasks (singleton / wild /
-  disjunction). Wild positions need no history.
-- Reveal requires posterior ≥ 0.9 **and** rule accuracy ≥ 0.8 **and** enough
-  examples/clicks — the accuracy gate is what stops false rules from noise.
-- Default engine config: maxLength 3, noise 0.06, priorLambda 1.0.
+- Rule representation: window of per-position color bitmasks (singleton / 2-color
+  "or" / wild). Wild positions need no history. Disjunctions **capped at 2 colors**
+  (`maxDisjunction`) so 6-color palettes stay tractable (22 opts/pos → 10,648 rules).
+- **Asymmetric noise model**: `falsePositive 0.05` (clicks trusted) vs
+  `falseNegative 0.20` (misses forgiven). A missed square barely hurts a rule; a
+  click the rule can't explain hurts a lot.
+- Reveal gate: posterior ≥ 0.9 **and** click-precision ≥ 0.9 (≥90% of your clicks
+  fit the rule) **and** accuracy ≥ 0.75 (guards vs. random-clicking) **and** enough
+  examples/clicks.
+- Palette: default 3 colors (red/green/yellow); "6 colors" adds orange/purple/blue.
+  `palette.js` exports ALL_COLORS + DEFAULT_PALETTE; palette passed as a prop, modes
+  remount on change via `key`.
+- Grid mode is the **default**; passed squares dim, upcoming stay bright.
+- Engine defaults: maxLength 3, maxDisjunction 2, priorLambda 1.0.
 
 ## Open ideas / next steps (not started)
 - **Tuning/feel:** colors are uniform random, so deep rules (e.g. red→any→red)

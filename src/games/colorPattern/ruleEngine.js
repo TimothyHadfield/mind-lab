@@ -13,19 +13,21 @@
 // *bitmask* over palette indices describing which colors are allowed there:
 //   - a single bit set  -> a specific color            (e.g. "red")
 //   - all bits set       -> "any / wild" (no constraint at that position)
-//   - two+ bits set      -> a disjunction               (e.g. "green or black")
+//   - two bits set       -> a 2-way disjunction         (e.g. "green or black")
+// Disjunctions are capped at two colors (see maxDisjunction) to keep the rule
+// language teachable and the hypothesis space small even with a big palette.
 // A position that is wild needs no history to be satisfied, so a rule of
 // effective length 1 (only position 0 constrained) works from the very first
 // color, while deeper rules only start firing once enough history exists.
 //
 // INFERENCE
 // ---------
-// We enumerate every possible rule (every combination of non-empty per-position
-// subsets) and keep a Bayesian posterior over them:
+// We enumerate every allowed rule and keep a Bayesian posterior over them:
 //   - PRIOR favours simpler rules (Occam): fewer constrained positions,
 //     shallower windows, and tighter constraints are cheaper.
-//   - LIKELIHOOD uses a small misclick/noise probability so a single stray or
-//     missed click doesn't destroy the true hypothesis.
+//   - LIKELIHOOD uses an ASYMMETRIC noise model: a click is trusted (false
+//     positives are rare), while a miss is forgiven (false negatives are
+//     common) — you often skip a matching square, but rarely click a wrong one.
 // The posterior gives us both a live prediction (should the user click now?)
 // and a confidence (how sure are we of the single best rule?) which drives the
 // "I think your rule is ..." reveal.
@@ -51,11 +53,16 @@ function logSumExpParts(logs) {
   return { max, total: max + Math.log(sum) }
 }
 
-// Every non-empty subset of a `size`-color palette, as bitmasks 1..(2^size - 1).
-function allNonEmptyMasks(size) {
+// Allowed per-position constraints as bitmasks: any single color, any
+// disjunction of up to `maxDisjunction` colors, or the full set ("any").
+// Capping disjunction size keeps the hypothesis space small for big palettes
+// (e.g. 6 colors -> 22 options/position instead of 63).
+function positionMasks(size, maxDisjunction) {
   const full = (1 << size) - 1
   const masks = []
-  for (let m = 1; m <= full; m++) masks.push(m)
+  for (let m = 1; m <= full; m++) {
+    if (popcount(m) <= maxDisjunction || m === full) masks.push(m)
+  }
   return masks
 }
 
@@ -131,12 +138,15 @@ export function describeRule(rule, palette) {
 
 const DEFAULTS = {
   maxLength: 3,
-  noise: 0.06, // probability of a misclick / missed click
+  maxDisjunction: 2, // a position may allow 1 color, 2 ("or"), or any
+  falsePositive: 0.05, // clicking a square that does NOT fit — rare
+  falseNegative: 0.2, // missing a square that DOES fit — forgivable
   priorLambda: 1.0, // strength of the Occam prior
   revealThreshold: 0.9, // posterior mass of the top rule needed to announce it
   minExamples: 12, // don't announce before this many colors seen
   minPositives: 3, // ...or before this many actual clicks
-  minAccuracy: 0.8, // the top rule must also explain the clicks this well
+  minPrecision: 0.9, // >=90% of your clicks must fit the announced rule
+  minAccuracy: 0.75, // ...and it must broadly fit overall (guards vs. noise)
 }
 
 export function createRuleEngine(config = {}) {
@@ -148,11 +158,15 @@ export function createRuleEngine(config = {}) {
   const P = palette.length
   const fullMask = (1 << P) - 1
 
-  const rules = enumerateRules(allNonEmptyMasks(P), cfg.maxLength)
+  const rules = enumerateRules(positionMasks(P, cfg.maxDisjunction), cfg.maxLength)
   const H = rules.length
 
-  const logLikeAgree = Math.log(1 - cfg.noise)
-  const logLikeDisagree = Math.log(cfg.noise)
+  // Asymmetric label-noise model. Four cases per square, by (rule fires?) x
+  // (you clicked?). Clicks are trusted; misses are forgiven.
+  const logTP = Math.log(1 - cfg.falseNegative) // fires, you clicked
+  const logFN = Math.log(cfg.falseNegative) // fires, you didn't (a miss)
+  const logFP = Math.log(cfg.falsePositive) // quiet, you clicked (a slip)
+  const logTN = Math.log(1 - cfg.falsePositive) // quiet, you didn't
 
   // logScore[h] = logPrior(h) + sum of log-likelihoods of observed labels.
   const logScore = new Float64Array(H)
@@ -204,8 +218,8 @@ export function createRuleEngine(config = {}) {
     if (label) positives++
     for (let h = 0; h < H; h++) {
       const predictsClick = pendingMatches[h] === 1
-      const agree = predictsClick === (label === 1)
-      logScore[h] += agree ? logLikeAgree : logLikeDisagree
+      if (predictsClick) logScore[h] += label ? logTP : logFN
+      else logScore[h] += label ? logFP : logTN
     }
     pendingMatches = null
   }
@@ -222,23 +236,30 @@ export function createRuleEngine(config = {}) {
     }
     const confidence = mapMass < 0 ? 0 : mapMass
 
-    // How well does the single best rule actually explain the clicks so far?
-    // A rule fit to random clicking scores near chance; a true rule scores high.
-    // This guards against announcing a rule hallucinated out of noise.
+    // Two views of how well the best rule explains you:
+    //  - mapAccuracy: agreement across EVERY square (misses count against it).
+    //  - clickPrecision: of the squares you DID click, how many the rule fires
+    //    on. Because clicks are the trusted signal, this drives the reveal — a
+    //    few missed squares (false negatives) don't block it, but a rule that
+    //    fails to explain your actual clicks does.
     let mapAccuracy = 1
+    let clickHits = 0
     if (examples > 0) {
       let correct = 0
       for (let t = 0; t < history.length; t++) {
         const fires = ruleMatches(rules[mapIndex], history, t, fullMask)
         if (fires === (clicks[t] === 1)) correct++
+        if (clicks[t] === 1 && fires) clickHits++
       }
       mapAccuracy = correct / history.length
     }
+    const clickPrecision = positives > 0 ? clickHits / positives : 1
 
     const ready =
       examples >= cfg.minExamples &&
       positives >= cfg.minPositives &&
       confidence >= cfg.revealThreshold &&
+      clickPrecision >= cfg.minPrecision &&
       mapAccuracy >= cfg.minAccuracy
 
     // Top few rules, for an optional "what the AI is thinking" panel.
@@ -255,6 +276,7 @@ export function createRuleEngine(config = {}) {
       positives,
       confidence,
       mapAccuracy,
+      clickPrecision,
       revealReady: ready,
       mapRule: rules[mapIndex],
       mapRuleText: describeRule(rules[mapIndex], palette),

@@ -27,9 +27,10 @@ function mulberry32(seed) {
   }
 }
 
-// Drive an engine with a random color stream, labelling clicks by `truthRule`
-// (with optional misclick noise). Returns the final engine state.
-function simulate(truthRule, { ticks, noise = 0, seed = 1 } = {}) {
+// Drive an engine with a random color stream, labelling clicks by `truthRule`.
+// Noise is ASYMMETRIC: fnRate = chance of missing a matching square (common),
+// fpRate = chance of clicking a non-matching square (rare) — mirroring real play.
+function simulate(truthRule, { ticks, fnRate = 0, fpRate = 0, seed = 1 } = {}) {
   const rng = mulberry32(seed)
   const engine = createRuleEngine({ palette: PALETTE })
   const history = []
@@ -37,8 +38,10 @@ function simulate(truthRule, { ticks, noise = 0, seed = 1 } = {}) {
     const color = Math.floor(rng() * PALETTE.length)
     history.push(color)
     engine.pushColor(color)
-    let label = ruleMatches(truthRule, history, history.length - 1, FULL) ? 1 : 0
-    if (noise > 0 && rng() < noise) label = label ? 0 : 1 // flip = misclick
+    const fires = ruleMatches(truthRule, history, history.length - 1, FULL)
+    let label = fires ? 1 : 0
+    if (fires && rng() < fnRate) label = 0 // missed a matching square
+    if (!fires && rng() < fpRate) label = 1 // slipped and clicked a wrong one
     engine.settle(label)
   }
   return engine.getState()
@@ -53,11 +56,8 @@ describe('ruleMatches', () => {
 
   it('needs history for deep constraints but not for wild positions', () => {
     const rule = [bit(0), FULL, bit(0)] // red → any → red
-    // Only one color so far: position 2 has no history -> cannot fire.
     expect(ruleMatches(rule, [0], 0, FULL)).toBe(false)
-    // red, green, red -> fires (middle is wild).
     expect(ruleMatches(rule, [0, 1, 0], 2, FULL)).toBe(true)
-    // red, green, green -> current color not red -> no.
     expect(ruleMatches(rule, [0, 1, 1], 2, FULL)).toBe(false)
   })
 
@@ -95,12 +95,22 @@ describe('ruleComplexity (Occam prior)', () => {
   })
 })
 
-describe('createRuleEngine — recovery of known rules', () => {
-  it('enumerates the full hypothesis space', () => {
+describe('createRuleEngine — hypothesis space', () => {
+  it('caps disjunctions: 11 options/position for a 4-color palette', () => {
+    // singles (4) + pairs (6) + "any" (1) = 11 -> 11^3
     const engine = createRuleEngine({ palette: PALETTE })
-    expect(engine.hypothesisCount).toBe(Math.pow(FULL, 3)) // 15^3 = 3375
+    expect(engine.hypothesisCount).toBe(Math.pow(11, 3)) // 1331
   })
 
+  it('stays small for a 6-color palette', () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, name: `c${i}` }))
+    const engine = createRuleEngine({ palette: six })
+    // singles (6) + pairs (15) + any (1) = 22 -> 22^3
+    expect(engine.hypothesisCount).toBe(Math.pow(22, 3)) // 10648
+  })
+})
+
+describe('createRuleEngine — recovery of known rules', () => {
   it('recovers a simple L=1 rule ("red")', () => {
     const state = simulate([bit(0), FULL, FULL], { ticks: 80, seed: 7 })
     expect(state.mapRuleText).toBe('red')
@@ -121,14 +131,24 @@ describe('createRuleEngine — recovery of known rules', () => {
     expect(state.revealReady).toBe(true)
   })
 
-  it('still recovers the rule despite ~10% misclicks', () => {
+  it('recovers "(red or black) → blue" — the disjunctive case', () => {
+    // pos0 = blue, pos1 = red or black. Given enough distinguishing clicks the
+    // asymmetric model prefers the true (broader) rule over the simpler subset.
+    const truth = [bit(3), bit(0) | bit(2), FULL]
+    const state = simulate(truth, { ticks: 500, fnRate: 0.15, seed: 9 })
+    expect(state.mapRuleText).toBe('(red or black) → blue')
+    expect(state.revealReady).toBe(true)
+  })
+
+  it('forgives frequent misses (25% false negatives) and still recovers', () => {
     const state = simulate([bit(0), FULL, FULL], {
       ticks: 160,
-      noise: 0.1,
+      fnRate: 0.25,
       seed: 5,
     })
     expect(state.mapRuleText).toBe('red')
     expect(state.revealReady).toBe(true)
+    expect(state.clickPrecision).toBeGreaterThanOrEqual(0.9)
   })
 })
 
@@ -139,10 +159,9 @@ describe('createRuleEngine — skepticism', () => {
     for (let t = 0; t < 80; t++) {
       const color = Math.floor(rng() * PALETTE.length)
       engine.pushColor(color)
-      engine.settle(rng() < 0.5 ? 1 : 0) // click with no rule at all
+      engine.settle(rng() < 0.5 ? 1 : 0)
     }
-    const state = engine.getState()
-    expect(state.revealReady).toBe(false)
+    expect(engine.getState().revealReady).toBe(false)
   })
 
   it('reset() returns the engine to its prior', () => {

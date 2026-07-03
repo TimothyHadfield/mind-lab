@@ -47,7 +47,7 @@ export default function AiPanel({
 
       <Meter label="Confidence" pct={confidencePct} tone="violet" />
       {accuracyPct != null && (
-        <Meter label="Rule fit / accuracy" pct={accuracyPct} tone="green" />
+        <Meter label="Matches your clicks" pct={accuracyPct} tone="green" />
       )}
 
       <div className="ai-stats">

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createRuleEngine } from './ruleEngine.js'
-import { PALETTE } from './palette.js'
+import { ALL_COLORS, DEFAULT_PALETTE } from './palette.js'
 import AiPanel from './AiPanel.jsx'
 import GridMode from './GridMode.jsx'
 
@@ -16,60 +16,93 @@ const EMPTY_DISPLAY = {
   examples: 0,
   positives: 0,
   confidence: 0,
-  mapAccuracy: 1,
+  clickPrecision: 1,
   revealReady: false,
   mapRuleText: '',
   top: [],
   aiPredictsClick: false,
-  fireProbability: 0,
 }
 
 export default function ColorPatternGame() {
-  const [mode, setMode] = useState('live') // 'live' | 'grid'
-  const [showHelp, setShowHelp] = useState(false)
+  const [mode, setMode] = useState('grid') // 'grid' | 'live'
+  const [moreColors, setMoreColors] = useState(false)
+  const palette = moreColors ? ALL_COLORS : DEFAULT_PALETTE
 
   return (
     <div className="cp">
       <div className="cp-head">
         <div>
           <h2>Color Pattern</h2>
-          <p className="cp-sub">
-            Invent a secret rule about when to click. The AI will deduce it.
-          </p>
+          <p className="cp-sub">Pick a secret rule for when to click. The AI works it out.</p>
         </div>
-        <button className="link-btn" onClick={() => setShowHelp((s) => !s)}>
-          {showHelp ? 'Hide' : 'How to play'}
-        </button>
       </div>
 
-      <div className="mode-switch">
-        <button
-          className={`mode-opt ${mode === 'live' ? 'active' : ''}`}
-          onClick={() => setMode('live')}
-        >
-          🎬 Live stream
-          <small>colors flash one at a time</small>
-        </button>
-        <button
-          className={`mode-opt ${mode === 'grid' ? 'active' : ''}`}
-          onClick={() => setMode('grid')}
-        >
-          ⚡ Grid blitz
-          <small>paint hundreds at once</small>
-        </button>
+      <RuleGuide palette={palette} />
+
+      <div className="cp-settings">
+        <div className="mode-switch">
+          <button
+            className={`mode-opt ${mode === 'grid' ? 'active' : ''}`}
+            onClick={() => setMode('grid')}
+          >
+            ⚡ Grid
+          </button>
+          <button
+            className={`mode-opt ${mode === 'live' ? 'active' : ''}`}
+            onClick={() => setMode('live')}
+          >
+            🎬 Live
+          </button>
+        </div>
+        <div className="mode-switch">
+          <button
+            className={`mode-opt ${!moreColors ? 'active' : ''}`}
+            onClick={() => setMoreColors(false)}
+          >
+            3 colors
+          </button>
+          <button
+            className={`mode-opt ${moreColors ? 'active' : ''}`}
+            onClick={() => setMoreColors(true)}
+          >
+            6 colors
+          </button>
+        </div>
       </div>
 
-      {showHelp && <HelpPanel mode={mode} />}
-
-      {mode === 'live' ? <LiveMode /> : <GridMode />}
+      {mode === 'grid' ? (
+        <GridMode key={`grid-${palette.length}`} palette={palette} />
+      ) : (
+        <LiveMode key={`live-${palette.length}`} palette={palette} />
+      )}
     </div>
   )
 }
 
-function LiveMode() {
+function RuleGuide({ palette }) {
+  const names = palette.map((c) => c.name).join(', ')
+  return (
+    <div className="rule-guide">
+      <span>
+        Rules look at the <strong>last 3 squares</strong>. Each spot can be{' '}
+        <strong>one color</strong>, <strong>two colors</strong> (an “or”), or{' '}
+        <strong>any</strong>.
+      </span>
+      <span className="rule-guide-ex">
+        e.g. <code>red</code> · <code>red or green</code> ·{' '}
+        <code>red → any → red</code>
+      </span>
+      <span className="rule-guide-colors">
+        <em>Colors:</em> {names}
+      </span>
+    </div>
+  )
+}
+
+function LiveMode({ palette }) {
   const engineRef = useRef(null)
   if (!engineRef.current) {
-    engineRef.current = createRuleEngine({ palette: PALETTE })
+    engineRef.current = createRuleEngine({ palette })
   }
 
   const [running, setRunning] = useState(false)
@@ -78,10 +111,10 @@ function LiveMode() {
   const [display, setDisplay] = useState(EMPTY_DISPLAY)
   const [recent, setRecent] = useState([])
   const [pendingReveal, setPendingReveal] = useState(null)
-  const [phase, setPhase] = useState('training') // 'training' | 'revealed'
+  const [phase, setPhase] = useState('training')
   const [clickPulse, setClickPulse] = useState(0)
 
-  const currentRef = useRef(null) // { colorIdx, clicked, aiPredicted }
+  const currentRef = useRef(null)
   const phaseRef = useRef('training')
   const rejectedRef = useRef(new Set())
   const pendingRef = useRef(null)
@@ -104,7 +137,7 @@ function LiveMode() {
       )
     }
 
-    const nextIdx = Math.floor(Math.random() * PALETTE.length)
+    const nextIdx = Math.floor(Math.random() * palette.length)
     const pred = engine.pushColor(nextIdx)
     currentRef.current = {
       colorIdx: nextIdx,
@@ -114,11 +147,7 @@ function LiveMode() {
     setCurrentIdx(nextIdx)
 
     const state = engine.getState()
-    setDisplay({
-      ...state,
-      aiPredictsClick: pred.aiPredictsClick,
-      fireProbability: pred.fireProbability,
-    })
+    setDisplay({ ...state, aiPredictsClick: pred.aiPredictsClick })
 
     if (
       phaseRef.current === 'training' &&
@@ -130,7 +159,7 @@ function LiveMode() {
       pendingRef.current = offer
       setPendingReveal(offer)
     }
-  }, [])
+  }, [palette])
 
   useEffect(() => {
     if (!running) return undefined
@@ -182,9 +211,9 @@ function LiveMode() {
     setPendingReveal(null)
   }
 
-  const current = currentIdx == null ? null : PALETTE[currentIdx]
+  const current = currentIdx == null ? null : palette[currentIdx]
   const confidencePct = Math.round(display.confidence * 100)
-  const accuracyPct = Math.round(display.mapAccuracy * 100)
+  const precisionPct = Math.round(display.clickPrecision * 100)
 
   return (
     <div className="cp-body">
@@ -210,7 +239,7 @@ function LiveMode() {
           <small>(or press Space)</small>
         </button>
 
-        <RecentStrip recent={recent} palette={PALETTE} />
+        <RecentStrip recent={recent} palette={palette} />
 
         <div className="cp-controls">
           {running ? (
@@ -251,7 +280,7 @@ function LiveMode() {
             : 'no click expected',
         }}
         confidencePct={confidencePct}
-        accuracyPct={display.examples > 0 ? accuracyPct : null}
+        accuracyPct={display.examples > 0 ? precisionPct : null}
         examples={display.examples}
         examplesLabel="colors seen"
         positives={display.positives}
@@ -310,39 +339,6 @@ function RevealModal({ reveal, onAnswer }) {
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function HelpPanel({ mode }) {
-  return (
-    <div className="help">
-      <ol>
-        <li>
-          Think of a <strong>secret rule</strong> for when to click, based on the
-          most recent colors. Keep it simple at first.
-        </li>
-        {mode === 'live' ? (
-          <li>
-            Press <strong>Start</strong>. Colors appear one at a time. Click your
-            button (or Space) <em>every</em> time your rule is satisfied.
-          </li>
-        ) : (
-          <li>
-            In <strong>Grid blitz</strong>, click or drag down through the squares
-            (read left→right, top→bottom) marking where your rule fires. The AI
-            updates <em>live</em> with every pick — watch how fast it locks on.
-          </li>
-        )}
-        <li>
-          The AI watches which colors make you click and narrows down the rule.
-          When it's confident, it announces your rule.
-        </li>
-      </ol>
-      <p className="help-examples">
-        Example rules: <code>red</code> · <code>green or blue</code> ·{' '}
-        <code>red → any → red</code> · <code>green → black → (green or black)</code>
-      </p>
     </div>
   )
 }

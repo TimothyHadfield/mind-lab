@@ -329,9 +329,9 @@ function HelpPanel({ mode }) {
           </li>
         ) : (
           <li>
-            In <strong>Grid blitz</strong>, click or drag to mark every square
-            (read left→right, top→bottom) where your rule fires, then{' '}
-            <strong>Analyze</strong> — hundreds of examples in seconds.
+            In <strong>Grid blitz</strong>, click or drag down through the squares
+            (read left→right, top→bottom) marking where your rule fires. The AI
+            updates <em>live</em> with every pick — watch how fast it locks on.
           </li>
         )}
         <li>

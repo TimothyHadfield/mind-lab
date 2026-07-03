@@ -665,6 +665,12 @@ button {
   transform: scale(1.12);
   z-index: 1;
 }
+.sq.pending {
+  opacity: 0.4;
+}
+.sq.pending:hover {
+  opacity: 0.85;
+}
 .sq.sel {
   outline: 2px solid #fff;
   outline-offset: -2px;

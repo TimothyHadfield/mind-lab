@@ -4,7 +4,7 @@ export const ALL_COLORS = [
   { id: 'red', name: 'red', hex: '#e5484d' },
   { id: 'green', name: 'green', hex: '#30a46c' },
   { id: 'yellow', name: 'yellow', hex: '#f5d90a' },
-  { id: 'orange', name: 'orange', hex: '#f76b15' },
+  { id: 'pink', name: 'pink', hex: '#ec4899' },
   { id: 'purple', name: 'purple', hex: '#8e4ec6' },
   { id: 'blue', name: 'blue', hex: '#3b82f6' },
 ]

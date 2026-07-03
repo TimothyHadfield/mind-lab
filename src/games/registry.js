@@ -1,7 +1,9 @@
 // Central list of games in the lab. Adding a new game = add an entry here and
-// point `component` at its React component. `status: 'live'` makes it playable;
-// anything else renders as a "coming soon" card on the home screen.
+// point `component` at its React component. `status: 'live'` makes it playable.
 import ColorPatternGame from './colorPattern/ColorPatternGame.jsx'
+import MindReaderGame from './mindReader/MindReaderGame.jsx'
+import RpsGame from './rps/RpsGame.jsx'
+import BehaviorProfile from './profile/BehaviorProfile.jsx'
 
 export const GAMES = [
   {
@@ -21,27 +23,27 @@ export const GAMES = [
     description:
       'The Aaronson Oracle: an AI that predicts your next keypress ~70% of the time, because humans are terrible at being random.',
     accent: '#3b82f6',
-    status: 'coming-soon',
-    component: null,
+    status: 'live',
+    component: MindReaderGame,
   },
   {
     id: 'rps',
     title: 'Rock · Paper · Scissors',
     tagline: 'An opponent that learns your habits and adapts.',
     description:
-      'A Markov-ensemble opponent that models how you react to winning, losing, and tying — and exploits it.',
+      'A Markov-ensemble opponent that models how you react to winning, losing, and tying — and exploits it. Try to stay unpredictable.',
     accent: '#30a46c',
-    status: 'coming-soon',
-    component: null,
+    status: 'live',
+    component: RpsGame,
   },
   {
     id: 'profile',
     title: 'Behavior Profile',
     tagline: 'Your cross-game predictability, scored.',
     description:
-      'Aggregate traits across every game: repetitiveness, tilt-when-losing, contrarianism, and how predictable you are overall.',
+      'Aggregate traits across every game you play: repetition, tilt-after-losing, and how predictable you are overall.',
     accent: '#f59e0b',
-    status: 'coming-soon',
-    component: null,
+    status: 'live',
+    component: BehaviorProfile,
   },
 ]

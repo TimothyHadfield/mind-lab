@@ -4,8 +4,23 @@
 > Last updated: 2026-07-03.
 
 ## Where we are
-**Step 3 (build) — Game 1 is complete and verified.** The site runs, the Color
-Pattern game works, and its AI reliably deduces the user's secret rule.
+**All 4 games are built, tested, and deployed.** Color Pattern (rule inference),
+Mind Reader (Aaronson Oracle), Rock-Paper-Scissors (Markov ensemble), and Behavior
+Profile (cross-game predictability). Live at
+https://timothyhadfield.github.io/mind-lab/ . 20/20 tests pass.
+
+### Shared prediction engine (games 2-3)
+- `src/games/shared/predictor.js` — portfolio of expert predictors combined by a
+  **Hedge (multiplicative-weights) meta-learner** with fixed-share adaptivity.
+  Pure-function experts in `experts.js` (frequency, markov-k). Tested in
+  `predictor.test.js`: cracks constant/alternating/period-3 players, beats chance
+  on a repeat-avoider, stays ~50% on true randomness.
+- `src/games/shared/stats.js` — localStorage event log every prediction game writes
+  to; Behavior Profile reads it.
+- Mind Reader: binary, `defaultExperts(4)`. RPS: `rpsExperts()` adds win-stay/
+  lose-shift + beat-last-AI experts (real human RPS tendencies). AI plays the
+  counter to its prediction.
+- Games show **live measured accuracy vs chance** (honest, no fake confidence).
 
 Workflow with the user: give initial thoughts → research → build, one step at a
 time, pausing to talk after each. `PLAN.md` has the design + research. This file

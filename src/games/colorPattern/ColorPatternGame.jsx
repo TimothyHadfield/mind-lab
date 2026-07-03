@@ -1,14 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createRuleEngine } from './ruleEngine.js'
-
-// The palette the player and AI share. Names match the user's mental model
-// (red / green / black / blue); hexes are picked to stay distinct on a light box.
-const PALETTE = [
-  { id: 'red', name: 'red', hex: '#e5484d' },
-  { id: 'green', name: 'green', hex: '#30a46c' },
-  { id: 'black', name: 'black', hex: '#1f2430' },
-  { id: 'blue', name: 'blue', hex: '#3b82f6' },
-]
+import { PALETTE } from './palette.js'
+import AiPanel from './AiPanel.jsx'
+import GridMode from './GridMode.jsx'
 
 const SPEEDS = [
   { label: 'Slow', ms: 1600 },
@@ -31,6 +25,48 @@ const EMPTY_DISPLAY = {
 }
 
 export default function ColorPatternGame() {
+  const [mode, setMode] = useState('live') // 'live' | 'grid'
+  const [showHelp, setShowHelp] = useState(false)
+
+  return (
+    <div className="cp">
+      <div className="cp-head">
+        <div>
+          <h2>Color Pattern</h2>
+          <p className="cp-sub">
+            Invent a secret rule about when to click. The AI will deduce it.
+          </p>
+        </div>
+        <button className="link-btn" onClick={() => setShowHelp((s) => !s)}>
+          {showHelp ? 'Hide' : 'How to play'}
+        </button>
+      </div>
+
+      <div className="mode-switch">
+        <button
+          className={`mode-opt ${mode === 'live' ? 'active' : ''}`}
+          onClick={() => setMode('live')}
+        >
+          🎬 Live stream
+          <small>colors flash one at a time</small>
+        </button>
+        <button
+          className={`mode-opt ${mode === 'grid' ? 'active' : ''}`}
+          onClick={() => setMode('grid')}
+        >
+          ⚡ Grid blitz
+          <small>paint hundreds at once</small>
+        </button>
+      </div>
+
+      {showHelp && <HelpPanel mode={mode} />}
+
+      {mode === 'live' ? <LiveMode /> : <GridMode />}
+    </div>
+  )
+}
+
+function LiveMode() {
   const engineRef = useRef(null)
   if (!engineRef.current) {
     engineRef.current = createRuleEngine({ palette: PALETTE })
@@ -44,9 +80,7 @@ export default function ColorPatternGame() {
   const [pendingReveal, setPendingReveal] = useState(null)
   const [phase, setPhase] = useState('training') // 'training' | 'revealed'
   const [clickPulse, setClickPulse] = useState(0)
-  const [showHelp, setShowHelp] = useState(false)
 
-  // Refs mirror state that the interval callback needs without going stale.
   const currentRef = useRef(null) // { colorIdx, clicked, aiPredicted }
   const phaseRef = useRef('training')
   const rejectedRef = useRef(new Set())
@@ -55,7 +89,6 @@ export default function ColorPatternGame() {
   const advance = useCallback(() => {
     const engine = engineRef.current
 
-    // Settle the color that was on screen for the last interval.
     const prev = currentRef.current
     if (prev) {
       engine.settle(prev.clicked)
@@ -71,7 +104,6 @@ export default function ColorPatternGame() {
       )
     }
 
-    // Show a new color and get the AI's live prediction for it.
     const nextIdx = Math.floor(Math.random() * PALETTE.length)
     const pred = engine.pushColor(nextIdx)
     currentRef.current = {
@@ -88,8 +120,6 @@ export default function ColorPatternGame() {
       fireProbability: pred.fireProbability,
     })
 
-    // Offer a reveal once the AI is confident — but never re-offer a rule the
-    // user has already rejected.
     if (
       phaseRef.current === 'training' &&
       state.revealReady &&
@@ -102,7 +132,6 @@ export default function ColorPatternGame() {
     }
   }, [])
 
-  // Drive the game loop.
   useEffect(() => {
     if (!running) return undefined
     const id = setInterval(advance, speedMs)
@@ -117,7 +146,6 @@ export default function ColorPatternGame() {
     setClickPulse((p) => p + 1)
   }, [running])
 
-  // Spacebar = click.
   useEffect(() => {
     const onKey = (e) => {
       if (e.code === 'Space') {
@@ -159,159 +187,85 @@ export default function ColorPatternGame() {
   const accuracyPct = Math.round(display.mapAccuracy * 100)
 
   return (
-    <div className="cp">
-      <div className="cp-head">
-        <div>
-          <h2>Color Pattern</h2>
-          <p className="cp-sub">
-            Invent a secret rule about when to click. The AI will deduce it.
-          </p>
-        </div>
-        <button className="link-btn" onClick={() => setShowHelp((s) => !s)}>
-          {showHelp ? 'Hide' : 'How to play'}
-        </button>
-      </div>
-
-      {showHelp && <HelpPanel />}
-
-      <div className="cp-body">
-        {/* -------- Player side -------- */}
-        <section className="cp-stage">
-          <div
-            className={`color-box ${running ? '' : 'is-idle'}`}
-            style={{ background: current ? current.hex : '#e9edf5' }}
-          >
-            {current ? (
-              <span className="color-name">{current.name}</span>
-            ) : (
-              <span className="color-name muted">press Start</span>
-            )}
-          </div>
-
-          <button
-            key={clickPulse}
-            className={`click-btn ${clickPulse ? 'pulse' : ''}`}
-            onClick={registerClick}
-            disabled={!running}
-          >
-            My rule just happened — CLICK
-            <small>(or press Space)</small>
-          </button>
-
-          <RecentStrip recent={recent} palette={PALETTE} />
-
-          <div className="cp-controls">
-            {running ? (
-              <button className="ctl" onClick={() => setRunning(false)}>
-                ⏸ Pause
-              </button>
-            ) : (
-              <button className="ctl ctl-primary" onClick={() => setRunning(true)}>
-                ▶ Start
-              </button>
-            )}
-            <button className="ctl" onClick={handleReset}>
-              ↺ Reset
-            </button>
-            <div className="speed">
-              {SPEEDS.map((s) => (
-                <button
-                  key={s.ms}
-                  className={`speed-opt ${speedMs === s.ms ? 'active' : ''}`}
-                  onClick={() => setSpeedMs(s.ms)}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* -------- AI side -------- */}
-        <aside className="cp-ai">
-          <div className="ai-head">
-            <span className="ai-dot" />
-            <h3>The AI</h3>
-            <span className="ai-status">
-              {phase === 'revealed'
-                ? 'testing itself'
-                : running
-                  ? 'watching…'
-                  : 'idle'}
-            </span>
-          </div>
-
-          <div
-            className={`ai-predict ${display.aiPredictsClick ? 'on' : ''}`}
-            title="Lights up when the AI thinks your rule just fired"
-          >
-            <span className="ai-predict-label">
-              {display.aiPredictsClick ? 'I think you clicked!' : 'no click expected'}
-            </span>
-          </div>
-
-          <Meter label="Confidence" pct={confidencePct} tone="violet" />
-          {display.examples > 0 && (
-            <Meter label="Rule fit / accuracy" pct={accuracyPct} tone="green" />
-          )}
-
-          <div className="ai-stats">
-            <div>
-              <strong>{display.examples}</strong>
-              <span>colors seen</span>
-            </div>
-            <div>
-              <strong>{display.positives}</strong>
-              <span>your clicks</span>
-            </div>
-          </div>
-
-          {phase === 'revealed' ? (
-            <div className="ai-guess revealed">
-              <span className="ai-guess-label">Your rule is</span>
-              <span className="ai-guess-rule">{display.mapRuleText}</span>
-              <p className="ai-guess-foot">
-                Now watch — I light up my button the instant your rule fires.
-              </p>
-            </div>
+    <div className="cp-body">
+      <section className="cp-stage">
+        <div
+          className={`color-box ${running ? '' : 'is-idle'}`}
+          style={{ background: current ? current.hex : '#e9edf5' }}
+        >
+          {current ? (
+            <span className="color-name">{current.name}</span>
           ) : (
-            <div className="ai-guess">
-              <span className="ai-guess-label">Leading guess</span>
-              <span className="ai-guess-rule">
-                {display.examples > 3 ? display.mapRuleText : '…'}
-              </span>
-              {display.top.length > 1 && (
-                <ul className="ai-alts">
-                  {display.top.slice(0, 3).map((t, i) => (
-                    <li key={i}>
-                      <span>{t.text}</span>
-                      <em>{Math.round(t.probability * 100)}%</em>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <span className="color-name muted">press Start</span>
           )}
-        </aside>
-      </div>
+        </div>
+
+        <button
+          key={clickPulse}
+          className={`click-btn ${clickPulse ? 'pulse' : ''}`}
+          onClick={registerClick}
+          disabled={!running}
+        >
+          My rule just happened — CLICK
+          <small>(or press Space)</small>
+        </button>
+
+        <RecentStrip recent={recent} palette={PALETTE} />
+
+        <div className="cp-controls">
+          {running ? (
+            <button className="ctl" onClick={() => setRunning(false)}>
+              ⏸ Pause
+            </button>
+          ) : (
+            <button className="ctl ctl-primary" onClick={() => setRunning(true)}>
+              ▶ Start
+            </button>
+          )}
+          <button className="ctl" onClick={handleReset}>
+            ↺ Reset
+          </button>
+          <div className="speed">
+            {SPEEDS.map((s) => (
+              <button
+                key={s.ms}
+                className={`speed-opt ${speedMs === s.ms ? 'active' : ''}`}
+                onClick={() => setSpeedMs(s.ms)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <AiPanel
+        statusText={
+          phase === 'revealed' ? 'testing itself' : running ? 'watching…' : 'idle'
+        }
+        predict={{
+          show: true,
+          on: display.aiPredictsClick,
+          label: display.aiPredictsClick
+            ? 'I think you clicked!'
+            : 'no click expected',
+        }}
+        confidencePct={confidencePct}
+        accuracyPct={display.examples > 0 ? accuracyPct : null}
+        examples={display.examples}
+        examplesLabel="colors seen"
+        positives={display.positives}
+        positivesLabel="your clicks"
+        revealed={phase === 'revealed'}
+        mapRuleText={display.examples > 3 ? display.mapRuleText : ''}
+        revealedFooter="Now watch — I light up my button the instant your rule fires."
+        top={display.top}
+        showGuess
+      />
 
       {pendingReveal && (
         <RevealModal reveal={pendingReveal} onAnswer={confirmReveal} />
       )}
-    </div>
-  )
-}
-
-function Meter({ label, pct, tone }) {
-  return (
-    <div className="meter">
-      <div className="meter-top">
-        <span>{label}</span>
-        <span>{pct}%</span>
-      </div>
-      <div className="meter-track">
-        <div className={`meter-fill ${tone}`} style={{ width: `${pct}%` }} />
-      </div>
     </div>
   )
 }
@@ -346,9 +300,7 @@ function RevealModal({ reveal, onAnswer }) {
         <span className="modal-eyebrow">I think I've got it</span>
         <h3>Your rule is…</h3>
         <p className="modal-rule">{reveal.ruleText}</p>
-        <p className="modal-conf">
-          {Math.round(reveal.confidence * 100)}% sure
-        </p>
+        <p className="modal-conf">{Math.round(reveal.confidence * 100)}% sure</p>
         <div className="modal-actions">
           <button className="ctl ctl-primary" onClick={() => onAnswer(true)}>
             🎯 Yes, that's it!
@@ -362,7 +314,7 @@ function RevealModal({ reveal, onAnswer }) {
   )
 }
 
-function HelpPanel() {
+function HelpPanel({ mode }) {
   return (
     <div className="help">
       <ol>
@@ -370,13 +322,21 @@ function HelpPanel() {
           Think of a <strong>secret rule</strong> for when to click, based on the
           most recent colors. Keep it simple at first.
         </li>
-        <li>
-          Press <strong>Start</strong>. Colors appear one at a time. Click your
-          button (or Space) <em>every</em> time your rule is satisfied.
-        </li>
+        {mode === 'live' ? (
+          <li>
+            Press <strong>Start</strong>. Colors appear one at a time. Click your
+            button (or Space) <em>every</em> time your rule is satisfied.
+          </li>
+        ) : (
+          <li>
+            In <strong>Grid blitz</strong>, click or drag to mark every square
+            (read left→right, top→bottom) where your rule fires, then{' '}
+            <strong>Analyze</strong> — hundreds of examples in seconds.
+          </li>
+        )}
         <li>
           The AI watches which colors make you click and narrows down the rule.
-          When it's confident, it'll announce your rule.
+          When it's confident, it announces your rule.
         </li>
       </ol>
       <p className="help-examples">

@@ -18,6 +18,12 @@ tracks status so a new chat can resume cleanly.
 - ✅ `ruleEngine.js` — Bayesian rule-inference engine. **12/12 unit tests pass.**
 - ✅ `ColorPatternGame.jsx` — full game UI (color stream, click/Space, AI panel
   with live prediction + confidence + accuracy meters, reveal modal, reset/speed).
+- ✅ **Two play modes** via a toggle: **Live stream** (timed, one color at a time)
+  and **Grid blitz** (`GridMode.jsx`) — a grid of 120/240/400 random squares the
+  user click/drag-paints (reading order left→right, top→bottom), then "Analyze"
+  feeds the whole batch to the engine at once for near-instant inference. Shared
+  `AiPanel.jsx` + `palette.js`. After analyzing, AI-predicted squares show a dot
+  and disagreements a marker.
 - ✅ Site shell + game menu (`App.jsx`, `registry.js`, `GameCard.jsx`) with 3
   future games stubbed as "coming soon".
 - ✅ Verified: unit tests, production build, dev server serves, and an integration

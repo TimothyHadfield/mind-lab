@@ -32,6 +32,14 @@ tracks status so a new chat can resume cleanly.
   work regardless.
 - Run: `npm install` → `npm run dev` (http://localhost:5173), `npm test`.
 
+## Git / publishing
+- This folder is its own git repo (`git init` done), one commit on `main`. It sits
+  inside the larger "Code Projects" repo but is independent.
+- NOT yet on GitHub — creating a repo needs the user to authenticate once. `gh`
+  CLI (v2.96) is installed. To publish: `gh auth login` then `./publish.ps1`
+  (creates `mind-lab`, public, and pushes). `gh` lives at
+  `C:\Program Files\GitHub CLI`.
+
 ## Key files
 - `src/games/colorPattern/ruleEngine.js` — the AI (pure, testable).
 - `src/games/colorPattern/ruleEngine.test.js` — unit tests.

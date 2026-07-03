@@ -4,10 +4,23 @@
 > Last updated: 2026-07-03.
 
 ## Where we are
-**All 4 games are built, tested, and deployed.** Color Pattern (rule inference),
-Mind Reader (Aaronson Oracle), Rock-Paper-Scissors (Markov ensemble), and Behavior
-Profile (cross-game predictability). Live at
-https://timothyhadfield.github.io/mind-lab/ . 20/20 tests pass.
+**5 games built, tested, and deployed.** Color Pattern (rule inference), Mind
+Reader (Aaronson Oracle), Rock-Paper-Scissors (Markov ensemble), Bank (dice
+push-your-luck), and Behavior Profile (cross-game predictability). Live at
+https://timothyhadfield.github.io/mind-lab/ . 25/25 tests pass.
+
+### Bank game (game 5)
+- `src/games/bank/` — rules copied from the user's separate **bank-evolution**
+  project (`Code Projects/bank_Evolution.html/index.html`): 10 rounds, safe rolls
+  1-3 (7 = +70), then 7 busts / doubles double / else add; banking locks the pot.
+  Human vs two simple threshold AIs (Cautious Cal 140, Bold Bella 240).
+- `bankPredictor.js` — CONTEXT-aware bank/roll predictor: experts keyed on
+  rollCount / turnTotal / standing / justDoubled, each tracking your bank-rate in
+  that bucket, combined by a Hedge meta-learner. Tested (`bankPredictor.test.js`).
+- Per the user: predictor **reveals its guess right after** each decision (not
+  before). Records to the shared stats → shows up in Behavior Profile.
+- NOTE: only the *gameplay* was copied. The evolution/training/stats machinery
+  stays in the user's dedicated bank app, NOT here.
 
 ### Shared prediction engine (games 2-3)
 - `src/games/shared/predictor.js` — portfolio of expert predictors combined by a

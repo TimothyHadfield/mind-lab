@@ -3,6 +3,7 @@
 import ColorPatternGame from './colorPattern/ColorPatternGame.jsx'
 import MindReaderGame from './mindReader/MindReaderGame.jsx'
 import RpsGame from './rps/RpsGame.jsx'
+import BankGame from './bank/BankGame.jsx'
 import BehaviorProfile from './profile/BehaviorProfile.jsx'
 
 export const GAMES = [
@@ -35,6 +36,16 @@ export const GAMES = [
     accent: '#30a46c',
     status: 'live',
     component: RpsGame,
+  },
+  {
+    id: 'bank',
+    title: 'Bank',
+    tagline: 'Push your luck. It learns when you cash out.',
+    description:
+      'The dice game BANK against simple AI opponents. Every round you choose to roll on or bank your points — and a predictor learns exactly when you tend to cash out, guessing each choice before you make it.',
+    accent: '#14b8a6',
+    status: 'live',
+    component: BankGame,
   },
   {
     id: 'profile',

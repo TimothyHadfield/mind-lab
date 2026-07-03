@@ -2,7 +2,11 @@ import { useState, useMemo } from 'react'
 import { getEvents, clearStats } from '../shared/stats.js'
 import { Meter } from '../colorPattern/AiPanel.jsx'
 
-const GAME_NAMES = { mindReader: 'Mind Reader', rps: 'Rock · Paper · Scissors' }
+const GAME_NAMES = {
+  mindReader: 'Mind Reader',
+  rps: 'Rock · Paper · Scissors',
+  bank: 'Bank',
+}
 
 const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0)
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x))

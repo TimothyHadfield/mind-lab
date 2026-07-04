@@ -10,6 +10,7 @@ import {
   newGame,
   rollDice,
   applyRoll,
+  aiShouldBank,
   aiBankStep,
   allBanked,
   advanceRound,
@@ -17,6 +18,28 @@ import {
 } from './bankGame.js'
 
 const NAMES = { human: 'You', ai1: 'Cautious Cal', ai2: 'Bold Bella' }
+
+// After the human is out, play the round to its end for the remaining AIs. Their
+// decisions come only from game state, so there's nothing to leak here.
+function finishForAIs(state) {
+  let s = state
+  let guard = 0
+  while (!allBanked(s) && guard++ < 80) {
+    const dice = rollDice()
+    const r = applyRoll(s, dice)
+    s = {
+      ...s,
+      lastDice: dice,
+      turnTotal: r.turnTotal,
+      rollCount: r.rollCount,
+      justDoubled: r.justDoubled,
+    }
+    if (r.busted) break
+    const b = aiBankStep(s)
+    s = { ...s, banked: b.banked, scores: b.scores }
+  }
+  return advanceRound(s)
+}
 
 export default function BankGame() {
   const predictorRef = useRef(null)
@@ -70,61 +93,59 @@ export default function BankGame() {
     setLocked(false)
   }, [])
 
-  const humanRoll = useCallback(() => {
-    const s = gRef.current
-    if (s.over || s.banked[HUMAN]) return
-    resolve(0)
-    const dice = rollDice()
-    const r = applyRoll(s, dice)
-    let ns = {
-      ...s,
-      lastDice: dice,
-      turnTotal: r.turnTotal,
-      rollCount: r.rollCount,
-      justDoubled: r.justDoubled,
-      lastEvent: `You rolled ${dice[0]} + ${dice[1]} — ${r.note}`,
-    }
-    if (r.busted) {
-      ns = advanceRound(ns)
-    } else {
-      const { banked, scores } = aiBankStep(ns)
-      ns = { ...ns, banked, scores }
-      if (allBanked(ns)) ns = advanceRound(ns)
-    }
-    setGame(ns)
-    commitFor(ns)
-  }, [resolve, commitFor])
+  // Every decision resolves SIMULTANEOUSLY: the AIs decide at the current pot
+  // from game state alone, the human decides independently, and the AI choices
+  // are only revealed after the human has committed. Neither reads the other.
+  const humanDecision = useCallback(
+    (humanBanks) => {
+      const s = gRef.current
+      if (s.over || s.banked[HUMAN]) return
+      if (humanBanks && s.turnTotal <= 0) return
 
-  const humanBank = useCallback(() => {
-    const s = gRef.current
-    if (s.over || s.banked[HUMAN] || s.turnTotal <= 0) return
-    resolve(1)
-    let ns = {
-      ...s,
-      banked: { ...s.banked, [HUMAN]: true },
-      scores: { ...s.scores, [HUMAN]: s.roundStart[HUMAN] + s.turnTotal },
-      lastEvent: `You banked ${s.turnTotal}!`,
-    }
-    // Finish the round for any remaining AIs.
-    let guard = 0
-    while (!allBanked(ns) && guard++ < 80) {
-      const dice = rollDice()
-      const r = applyRoll(ns, dice)
-      ns = {
-        ...ns,
-        lastDice: dice,
-        turnTotal: r.turnTotal,
-        rollCount: r.rollCount,
-        justDoubled: r.justDoubled,
+      resolve(humanBanks ? 1 : 0)
+
+      const banked = { ...s.banked }
+      const scores = { ...s.scores }
+      const aiNames = []
+      for (const ai of AIS) {
+        if (!banked[ai.id] && aiShouldBank(ai, s.turnTotal, s.rollCount)) {
+          banked[ai.id] = true
+          scores[ai.id] = s.roundStart[ai.id] + s.turnTotal
+          aiNames.push(ai.name)
+        }
       }
-      if (r.busted) break
-      const { banked, scores } = aiBankStep(ns)
-      ns = { ...ns, banked, scores }
-    }
-    ns = advanceRound(ns)
-    setGame(ns)
-    commitFor(ns)
-  }, [resolve, commitFor])
+      if (humanBanks) {
+        banked[HUMAN] = true
+        scores[HUMAN] = s.roundStart[HUMAN] + s.turnTotal
+      }
+      let ns = { ...s, banked, scores }
+      const youMsg = humanBanks ? `You banked ${s.turnTotal}. ` : ''
+      const aiMsg = aiNames.length ? `${aiNames.join(' & ')} banked ${s.turnTotal}. ` : ''
+
+      if (allBanked(ns)) {
+        ns = advanceRound({ ...ns, lastEvent: `${youMsg}${aiMsg}Round over.` })
+      } else if (banked[HUMAN]) {
+        // Human is out — play the rest of the round for the AIs.
+        ns = finishForAIs({ ...ns, lastEvent: `${youMsg}${aiMsg}AIs play on…` })
+      } else {
+        // Human continues — roll the shared dice to the next pot.
+        const dice = rollDice()
+        const r = applyRoll(ns, dice)
+        ns = {
+          ...ns,
+          lastDice: dice,
+          turnTotal: r.turnTotal,
+          rollCount: r.rollCount,
+          justDoubled: r.justDoubled,
+          lastEvent: `${aiMsg}Rolled ${dice[0]} + ${dice[1]} — ${r.note}`,
+        }
+        if (r.busted) ns = advanceRound(ns)
+      }
+      setGame(ns)
+      commitFor(ns)
+    },
+    [resolve, commitFor]
+  )
 
   const restart = () => {
     predictorRef.current.reset()
@@ -193,12 +214,15 @@ export default function BankGame() {
             </div>
           ) : (
             <div className="bank-actions">
-              <button className="ctl ctl-primary bank-roll" onClick={humanRoll}>
+              <button
+                className="ctl ctl-primary bank-roll"
+                onClick={() => humanDecision(false)}
+              >
                 🎲 Roll
               </button>
               <button
                 className="ctl bank-bank"
-                onClick={humanBank}
+                onClick={() => humanDecision(true)}
                 disabled={!canBank}
               >
                 💰 Bank ({g.turnTotal})

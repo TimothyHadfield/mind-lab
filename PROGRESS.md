@@ -4,10 +4,26 @@
 > Last updated: 2026-07-03.
 
 ## Where we are
-**5 games built, tested, and deployed.** Color Pattern (rule inference), Mind
-Reader (Aaronson Oracle), Rock-Paper-Scissors (Markov ensemble), Bank (dice
-push-your-luck), and Behavior Profile (cross-game predictability). Live at
-https://timothyhadfield.github.io/mind-lab/ . 25/25 tests pass.
+**9 games built, tested, and deployed.** Live at
+https://timothyhadfield.github.io/mind-lab/ . 33/33 tests pass.
+Games: Color Pattern (rule inference), Guess My Rule / Eleusis (number-rule
+induction, active learning), Mind Reader (Aaronson Oracle), Pick a Random Number
+(10-symbol Aaronson), Where Will You Click (spatial Markov), Rock-Paper-Scissors
+(Markov ensemble), Prisoner's Dilemma (reciprocity modelling), Bank (dice push-
+your-luck), and Behavior Profile (cross-game predictability).
+
+### Newest 4 games (round 3)
+- `eleusis/numberRuleEngine.js` — Bayesian concept learning over ~45 number
+  predicates; **active learning** (`pickNext` asks the most informative number).
+  Tested: recovers even/>50/multiples/prime, tolerant of mislabels, skeptical of
+  inexpressible rules (Fibonacci).
+- `randomNumber/` + `clickGrid/` — both reuse the shared `createPredictor` (10 and
+  25 symbols). Commit-hidden guess, reveal after each pick.
+- `pd/` — Iterated Prisoner's Dilemma; `pdExperts.js` adds reciprocity (tit-for-tat)
+  + pair-conditioned experts to the portfolio. AI plays the move it predicts you'll
+  make. Tested.
+- All feed the Behavior Profile via `recordRound` (except Eleusis, which is rule
+  inference like Color Pattern).
 
 ### Bank game (game 5)
 - `src/games/bank/` — rules copied from the user's separate **bank-evolution**

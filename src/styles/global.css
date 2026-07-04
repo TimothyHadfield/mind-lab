@@ -1244,3 +1244,213 @@ button {
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* -------- Pick a Random Number -------- */
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.numpad-btn {
+  padding: 22px 0;
+  font-size: 22px;
+  font-weight: 800;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  transition: transform 0.06s ease, border-color 0.14s ease, background 0.14s ease;
+}
+.numpad-btn:hover {
+  border-color: var(--violet);
+  background: var(--panel-2);
+}
+.numpad-btn:active {
+  transform: scale(0.95);
+}
+
+/* -------- Where Will You Click -------- */
+.clickgrid {
+  display: grid;
+  gap: 8px;
+  aspect-ratio: 1 / 1;
+}
+.cell {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  transition: background 0.1s ease, border-color 0.1s ease, transform 0.05s ease;
+}
+.cell:hover {
+  background: var(--panel-2);
+  border-color: var(--violet);
+}
+.cell:active {
+  transform: scale(0.94);
+}
+.cell.guess {
+  border: 2px dashed var(--violet-soft);
+}
+.cell.pick {
+  background: var(--panel-2);
+}
+.cell.pick.hit {
+  background: var(--violet);
+  border-color: var(--violet);
+}
+.clickgrid-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 2px 0 0;
+}
+.swatch-key {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-left: 10px;
+}
+.swatch-key.pick {
+  background: var(--violet);
+}
+.swatch-key.guess {
+  border: 2px dashed var(--violet-soft);
+}
+
+/* -------- Prisoner's Dilemma -------- */
+.pd-result {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  text-align: center;
+  transition: border-color 0.15s ease;
+}
+.pd-result.coop {
+  border-color: color-mix(in srgb, var(--green) 45%, transparent);
+}
+.pd-result.defect {
+  border-color: color-mix(in srgb, #ef4444 45%, transparent);
+}
+.pd-result-row {
+  display: flex;
+  justify-content: space-around;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.pd-result-pay {
+  font-size: 20px;
+  font-weight: 800;
+}
+.pd-result-read {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pd-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pd-btn {
+  padding: 20px;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  color: #fff;
+}
+.pd-btn.coop {
+  background: linear-gradient(180deg, #34d399, #10b981);
+  border-color: transparent;
+}
+.pd-btn.defect {
+  background: linear-gradient(180deg, #f87171, #ef4444);
+  border-color: transparent;
+}
+.pd-btn:active {
+  transform: scale(0.97);
+}
+.pd-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.pd-matrix td {
+  border: 1px solid var(--line);
+  padding: 8px;
+  text-align: center;
+}
+.pd-matrix-h {
+  color: var(--muted);
+  font-weight: 600;
+  background: var(--bg-soft);
+}
+
+/* -------- Guess My Rule (Eleusis) -------- */
+.eleusis-q {
+  text-align: center;
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+}
+.eleusis-number {
+  font-size: 64px;
+  font-weight: 800;
+  color: var(--violet-soft);
+  line-height: 1.1;
+}
+.eleusis-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.eleusis-yes,
+.eleusis-no {
+  padding: 18px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.eleusis-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+}
+.eleusis-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+}
+.eleusis-chip.yes {
+  background: color-mix(in srgb, var(--green) 22%, transparent);
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+}
+.eleusis-chip.no {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  color: #fca5a5;
+  border-color: color-mix(in srgb, #ef4444 35%, transparent);
+}
+.eleusis-solved {
+  text-align: center;
+  padding: 30px 20px;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.14), transparent);
+  border: 1px solid var(--violet);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.eleusis-solved strong {
+  font-size: 26px;
+  color: var(--violet-soft);
+}

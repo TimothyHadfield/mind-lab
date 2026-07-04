@@ -6,6 +6,9 @@ const GAME_NAMES = {
   mindReader: 'Mind Reader',
   rps: 'Rock · Paper · Scissors',
   bank: 'Bank',
+  randomNumber: 'Pick a Random Number',
+  clickGrid: 'Where Will You Click?',
+  pd: "Prisoner's Dilemma",
 }
 
 const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0)

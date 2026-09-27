@@ -1,4 +1,35 @@
-# Mind Lab — Behavior Prediction
+# Mind Lab
+
+Nine small games where an AI watches your choices, learns your habits, and then
+proves it can predict what you'll do next. Try to be random; it's harder than it
+sounds.
+
+**[▶ Open the live app](https://timothyhadfield.github.io/mind-lab/)** · works on phone and laptop
+
+<p align="center">
+  <img src="docs/screenshots/mind-reader.png" alt="Mind Reader after 52 rounds: the AI has predicted the player's left/right choice 73% of the time against 50% chance and says 'You're predictable'" width="70%">
+  &nbsp;
+  <img src="docs/screenshots/rps-phone.png" alt="Rock Paper Scissors on a phone: the AI has won 22 rounds to the player's 5 by predicting their throws" width="24%">
+</p>
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="The Mind Lab home page listing all nine games" width="70%">
+</p>
+
+## Features
+- **Nine games** — Color Pattern, Guess My Rule, Mind Reader, Pick a Random Number, Where Will You Click?, Rock · Paper · Scissors, Prisoner's Dilemma, Bank, and a Behavior Profile.
+- **It reads your secret rule** — in Color Pattern you invent a rule about when to click, and a Bayesian engine works out the exact rule in your head and tells you.
+- **It plays scientist** — in Guess My Rule it picks the most informative numbers to ask about until it knows your number rule.
+- **Honest scoring** — every game shows the AI's measured accuracy next to what pure chance would get.
+- **Learns in real time** — a team of simple pattern-spotters (frequency, recent history, win-stay/lose-shift, tit-for-tat) is weighted by how well each one is predicting you right now.
+- **Behavior Profile** — sums up how predictable you are across all the games you've played.
+- **Private** — everything runs in your browser; nothing you do is sent anywhere.
+
+## Built with
+React + Vite, plain JavaScript models with Vitest unit tests, hosted on GitHub Pages.
+
+---
+
+## For developers
 
 A small website of games where an AI watches your choices during a short
 "training" period, learns the pattern behind them, and then shows you it has

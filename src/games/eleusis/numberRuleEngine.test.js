@@ -49,6 +49,38 @@ describe('number rule engine', () => {
     expect(st.mapRuleText).toBe('prime numbers')
   })
 
+  it('discovers "single-digit numbers" (no duplicate rule splitting the vote)', () => {
+    // "less than 10" picks out exactly the same numbers; as a separate
+    // hypothesis it capped confidence at ~73%, so this rule could never be
+    // announced.
+    const st = discover((n) => n < 10, { steps: 40 })
+    expect(st.revealReady).toBe(true)
+    expect(st.mapRuleText).toBe('single-digit numbers')
+  })
+
+  it('"two-digit numbers" does not include 100', () => {
+    const engine = createNumberRuleEngine()
+    engine.record(100, false)
+    engine.record(55, true)
+    engine.record(10, true)
+    engine.record(99, true)
+    engine.record(5, false)
+    const st = engine.getState()
+    expect(st.mapRuleText).toBe('two-digit numbers')
+    expect(st.mapTest(100)).toBe(false)
+    expect(st.mapTest(99)).toBe(true)
+  })
+
+  it('has no two hypotheses that pick out the same numbers', () => {
+    const engine = createNumberRuleEngine()
+    const sigs = engine.hypotheses.map((h) => {
+      let s = ''
+      for (let n = 1; n <= 100; n++) s += h.test(n) ? '1' : '0'
+      return s
+    })
+    expect(new Set(sigs).size).toBe(sigs.length)
+  })
+
   it('tolerates a little mislabeling and still lands on the rule', () => {
     const st = discover((n) => n % 2 === 0, { steps: 45, noise: 0.08 })
     expect(st.mapRuleText).toBe('even numbers')

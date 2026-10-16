@@ -23,7 +23,7 @@ function buildHypotheses() {
   add('odd numbers', (n) => n % 2 === 1, 1)
   add('prime numbers', isPrime, 2.5)
   add('single-digit numbers', (n) => n < 10, 2)
-  add('two-digit numbers', (n) => n >= 10, 2)
+  add('two-digit numbers', (n) => n >= 10 && n <= 99, 2)
 
   // thresholds
   const thresholds = [10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90]
@@ -53,12 +53,29 @@ const DEFAULTS = {
   priorLambda: 1.0,
   revealThreshold: 0.9,
   minExamples: 8,
-  minAccuracy: 0.85,
+  // 0.9 (was 0.85): with the duplicate "less than 10" gone, 0.85 let the AI
+  // announce "single-digit numbers" for Fibonacci after 2 misses in 14.
+  minAccuracy: 0.9,
 }
 
 export function createNumberRuleEngine(config = {}) {
   const cfg = { ...DEFAULTS, ...config }
+  // Drop any rule that picks out exactly the same numbers as a cheaper one
+  // (e.g. "less than 10" = "single-digit numbers"): duplicates split the
+  // posterior so neither could ever reach the reveal threshold.
+  const seen = new Set()
   const H = buildHypotheses()
+    .map((h, i) => ({ h, i }))
+    .sort((a, b) => a.h.cost - b.h.cost || a.i - b.i)
+    .filter(({ h }) => {
+      let sig = ''
+      for (let n = cfg.domainMin; n <= cfg.domainMax; n++) sig += h.test(n) ? '1' : '0'
+      if (seen.has(sig)) return false
+      seen.add(sig)
+      return true
+    })
+    .sort((a, b) => a.i - b.i)
+    .map(({ h }) => h)
   const logA = Math.log(1 - cfg.noise)
   const logD = Math.log(cfg.noise)
 
@@ -150,6 +167,7 @@ export function createNumberRuleEngine(config = {}) {
     pickNext,
     getState,
     hypothesisCount: H.length,
+    hypotheses: H.map(({ name, test }) => ({ name, test })),
     reset() {
       logScore = H.map((h) => -cfg.priorLambda * h.cost)
       examples.length = 0

@@ -72,11 +72,23 @@ export default function GridMode({ palette }) {
   const onSquareEnter = (index) => {
     if (paintingRef.current) applyPaint(index)
   }
+  // Touch screens capture the pointer to the first square touched, so
+  // pointerenter never fires on the others: find the square under the finger.
+  const onGridMove = (e) => {
+    if (!paintingRef.current || e.pointerType === 'mouse') return
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    const idx = el && el.dataset ? el.dataset.index : undefined
+    if (idx != null) applyPaint(Number(idx))
+  }
 
   useEffect(() => {
     const stop = () => (paintingRef.current = false)
     window.addEventListener('pointerup', stop)
-    return () => window.removeEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+    return () => {
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
   }, [])
 
   const st = result?.state
@@ -120,6 +132,7 @@ export default function GridMode({ palette }) {
         <div
           className={`square-grid ${result ? 'analyzed' : ''}`}
           onDragStart={(e) => e.preventDefault()}
+          onPointerMove={onGridMove}
         >
           {grid.map((colorIdx, i) => {
             const isSel = selected.has(i)
@@ -130,6 +143,7 @@ export default function GridMode({ palette }) {
             return (
               <div
                 key={i}
+                data-index={i}
                 className={`sq ${isSel ? 'sel' : ''} ${aiPred ? 'ai' : ''} ${
                   mismatch ? 'miss' : ''
                 } ${done ? 'done' : ''}`}

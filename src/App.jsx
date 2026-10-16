@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GAMES } from './games/registry.js'
 import GameCard from './components/GameCard.jsx'
 
 export default function App() {
   const [activeId, setActiveId] = useState(null)
   const active = GAMES.find((g) => g.id === activeId && g.status === 'live')
+
+  // Open each game (and the menu) at the top. Without this, tapping a card low
+  // on the phone menu kept the scroll and landed below the game's controls.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [activeId])
 
   return (
     <div className="app">

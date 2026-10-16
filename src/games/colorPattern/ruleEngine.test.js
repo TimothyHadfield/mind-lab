@@ -175,3 +175,32 @@ describe('createRuleEngine — skepticism', () => {
     expect(state.confidence).toBeLessThan(0.5)
   })
 })
+
+// Grid mode replays the whole board through a fresh engine on every painted
+// square. With 6 colors (10,648 rules) and 400 squares that took over a second
+// per square, because pushColor() rebuilt the full posterior each time just to
+// produce a live prediction Grid mode never reads.
+describe('batch replay (grid mode)', () => {
+  const SIX = Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, name: `c${i}` }))
+  function replay(predict) {
+    const rng = mulberry32(42)
+    const engine = createRuleEngine({ palette: SIX })
+    const t0 = performance.now()
+    for (let i = 0; i < 400; i++) {
+      const c = Math.floor(rng() * 6)
+      engine.pushColor(c, { predict })
+      engine.settle(c === 0)
+    }
+    const state = engine.getState()
+    return { state, ms: performance.now() - t0 }
+  }
+
+  it('skipping the live prediction gives the same result, much faster', () => {
+    const full = replay(true)
+    const fast = replay(false)
+    expect(fast.state.mapRuleText).toBe(full.state.mapRuleText)
+    expect(fast.state.confidence).toBeCloseTo(full.state.confidence, 10)
+    expect(fast.state.top).toEqual(full.state.top)
+    expect(fast.ms * 3).toBeLessThan(full.ms)
+  })
+})

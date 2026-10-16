@@ -22,7 +22,7 @@ function analyzePrefix(grid, selected, palette) {
 
   const engine = createRuleEngine({ palette })
   for (let i = 0; i <= maxIndex; i++) {
-    engine.pushColor(grid[i])
+    engine.pushColor(grid[i], { predict: false })
     engine.settle(selected.has(i))
   }
   const state = engine.getState()

@@ -192,18 +192,21 @@ export function createRuleEngine(config = {}) {
 
   // A color is shown. Append to history, compute which rules fire now, and
   // return the posterior-weighted probability the user should click.
-  function pushColor(colorIndex) {
+  // { predict: false } skips that prediction (the costly part: a full posterior
+  // per color) for batch replays like Grid mode, which never read it.
+  function pushColor(colorIndex, { predict = true } = {}) {
     history.push(colorIndex)
     const t = history.length - 1
-    const post = currentPosterior()
+    const post = predict ? currentPosterior() : null
     const matches = new Uint8Array(H)
     let fireProb = 0
     for (let h = 0; h < H; h++) {
       const m = ruleMatches(rules[h], history, t, fullMask) ? 1 : 0
       matches[h] = m
-      if (m) fireProb += post[h]
+      if (m && post) fireProb += post[h]
     }
     pendingMatches = matches
+    if (!predict) return null
     return { fireProbability: fireProb, aiPredictsClick: fireProb > 0.5 }
   }
 

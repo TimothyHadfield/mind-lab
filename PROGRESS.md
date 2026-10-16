@@ -55,6 +55,13 @@ Workflow with the user: give initial thoughts → research → build, one step a
 time, pausing to talk after each. `PLAN.md` has the design + research. This file
 tracks status so a new chat can resume cleanly.
 
+### 2026-10-16 sweep
+- Bug sweep (claude/sweep-1016): Guess My Rule can now announce "single-digit
+  numbers" (duplicate "less than 10" removed; reveal accuracy gate 0.85 → 0.9),
+  "two-digit" excludes 100; Color Pattern grid drag works on touch; each game
+  opens scrolled to the top; favicon 404 silenced. 36/36 tests. Added CLAUDE.md.
+  Full report: laptop-ops `coding-and-claude/reports/sweep-2026-10-16/mind-lab.md`.
+
 ## Done
 - ✅ Step 1: initial thoughts on behavior prediction (Aaronson Oracle, ensembles).
 - ✅ Step 2: focused research (see PLAN.md → Research findings).

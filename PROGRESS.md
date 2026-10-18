@@ -18,6 +18,7 @@ Nothing in progress. The site is finished, live and maintained; no feature work 
 | Git | `main` = `origin/main`, last code commit `2025c14` (2026-10-16) |
 | Data | localStorage only (`mindlab.stats.v1`, 3000-round cap). No backend, no accounts, no network calls |
 | UI tests | None (no DOM test library); UI is checked with phone-view |
+| Site icon | 2026-10-17: `public/icon.svg` (violet brain on navy) tab favicon + `public/apple-touch-icon.png` for iPhone; Vite copies them to dist and rewrites the links to `./` |
 
 ## Authorized next steps
 - 2026-10-17 — Tim: "any fixes or improvements you feel confident about go ahead and do, pretty much always. You don't have to ask me." Wording, looks and new features are still his.
